@@ -1,0 +1,36 @@
+/* styles.css */
+
+/* Style for the main view */
+.root {
+    -fx-background-color: #f0f0f0;
+}
+
+/* Style for the table view */
+.table-view {
+    -fx-selection-bar: #ddd;
+    -fx-selection-bar-non-focused: #ddd;
+}
+
+/* Style for the table header */
+.table-view .column-header-background {
+    -fx-background-color: #ddd;
+}
+
+/* Style for the buttons */
+.button {
+    -fx-font-size: 14px;
+}
+
+/* Style for the cart section */
+.cart-section {
+    -fx-background-color: #f9f9f9;
+    -fx-padding: 10px;
+    -fx-border-color: #ddd;
+    -fx-border-width: 1px;
+}
+
+/* Style for the error message */
+.error-message {
+    -fx-font-size: 14px;
+    -fx-text-fill: red;
+}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.layout.AnchorPane?>
+
+<AnchorPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="main.java.controller.MainController">
+    <children>
+        <TableView fx:id="productTableView" layoutX="30.0" layoutY="30.0" prefHeight="400.0" prefWidth="740.0">
+            <columns>
+                <TableColumn fx:id="productIdColumn" text="ID" prefWidth="100.0" />
+                <TableColumn fx:id="productNameColumn" text="Product Name" prefWidth="250.0" />
+                <TableColumn fx:id="productPriceColumn" text="Price" prefWidth="100.0" />
+                <TableColumn fx:id="productQuantityColumn" text="Quantity" prefWidth="100.0" />
+            </columns>
+        </TableView>
+
+        <Button fx:id="addToCartButton" layoutX="30.0" layoutY="450.0" prefWidth="100.0" text="Add to Cart" />
+        <Button fx:id="removeFromCartButton" layoutX="150.0" layoutY="450.0" prefWidth="140.0" text="Remove from Cart" />
+        <Button fx:id="checkoutButton" layoutX="310.0" layoutY="450.0" prefWidth="100.0" text="Checkout" />
+        <Button fx:id="clearCartButton" layoutX="430.0" layoutY="450.0" prefWidth="100.0" text="Clear Cart" />
+        <Button fx:id="exitButton" layoutX="550.0" layoutY="450.0" prefWidth="100.0" text="Exit" />
+    </children>
+</AnchorPane>
