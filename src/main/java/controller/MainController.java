@@ -1,6 +1,10 @@
 package main.java.controller;
 
+import java.io.IOException;
+
 import javafx.collections.ObservableList;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.stage.Stage;
 import main.java.model.Customer;
 import main.java.model.Order;
@@ -14,17 +18,25 @@ public class MainController {
     private Customer customer;
 
     public MainController() {
-        
+
     }
-    public MainController(MainView mainView, ObservableList<Product> products, Customer customer) {
-        this.mainView = mainView;
+
+    public MainController(ObservableList<Product> products, Customer customer) {
         this.products = products;
         this.customer = customer;
         currentOrder = new Order(customer);
 
+    FXMLLoader loader = new FXMLLoader(getClass().getResource("/main/java/views/MainView.fxml"));
+    try {
+        Parent root = loader.load();
+        mainView = loader.getController(); // Initialize mainView
+        mainView.setMainController(this); // Set the controller in MainView
         mainView.setProducts(products);
-        mainView.setMainController(this);
+
         mainView.updateCart(currentOrder.getProducts());
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
     }
 
     public void addToCart(Product product, int quantity) {
@@ -76,5 +88,14 @@ public class MainController {
 
     public void exit(Stage primaryStage) {
         primaryStage.close();
+    }
+
+    public void setMainView(MainView mainView) {
+        this.mainView = mainView;
+    }
+
+    public void setCustomer(Customer customer) {
+        this.customer = customer;
+
     }
 }
