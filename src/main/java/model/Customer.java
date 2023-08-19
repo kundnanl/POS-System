@@ -7,13 +7,11 @@ public class Customer {
     private String name;
     private String email;
 
-    public Customer(String name) {
+    public Customer(String name, String email) {
         this.id = UUID.randomUUID();
         this.name = name;
         this.email = email;
     }
-
-    // Getters and Setters for the fields
 
     public UUID getId() {
         return id;

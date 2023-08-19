@@ -18,8 +18,6 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class MainApp extends Application {
     private Connection connection;
@@ -60,7 +58,7 @@ public class MainApp extends Application {
             }
             
             // Create a customer
-            Customer customer = new Customer("John Doe");
+            Customer customer = new Customer("John Doe","");
 
             // Get the MainView controller
             // Create the MainController and pass the MainView and the list of products to
@@ -68,11 +66,18 @@ public class MainApp extends Application {
             MainController mainController = new MainController(productList, customer);
             MainView mainView = loader.getController(); // Assuming you can access the MainView instance
             mainView.setFetchedProducts(productList); // Set the fetched products
-            mainView.setMainController(mainController);
-            
-
+            mainController.setMainView(mainView);
+            mainView.setAddToCartButtonHandler(() -> {
+                Product selectedProduct = mainView.getSelectedProduct();
+                if (selectedProduct != null) {
+                    mainController.addToCart(selectedProduct);
+                } else {
+                    mainView.showErrorMessage("Please select a product to add to cart.");
+                }
+            });
+                        
             // Set up the primary stage
-            Scene scene = new Scene(root, 800, 600);
+            Scene scene = new Scene(root);
             scene.getStylesheets().add(getClass().getResource("/main/java/resources/styles.css").toExternalForm());
             primaryStage.setScene(scene);
             primaryStage.setTitle("POS System");
