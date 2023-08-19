@@ -1,6 +1,11 @@
 package main.java.controller;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import javafx.collections.ObservableList;
 import javafx.fxml.FXMLLoader;
@@ -12,8 +17,9 @@ import main.java.model.Product;
 import main.java.views.MainView;
 
 public class MainController {
+    private Connection connection;
     private MainView mainView;
-    private ObservableList<Product> products;
+    private static ObservableList<Product> products;
     private Order currentOrder;
     private Customer customer;
 
@@ -26,17 +32,25 @@ public class MainController {
         this.customer = customer;
         currentOrder = new Order(customer);
 
-    FXMLLoader loader = new FXMLLoader(getClass().getResource("/main/java/views/MainView.fxml"));
-    try {
-        Parent root = loader.load();
-        mainView = loader.getController(); // Initialize mainView
-        mainView.setMainController(this); // Set the controller in MainView
-        mainView.setProducts(products);
+        try {
+            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/POS", "root", "mysql");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
 
-        mainView.updateCart(currentOrder.getProducts());
-    } catch (IOException e) {
-        e.printStackTrace();
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/main/java/views/MainView.fxml"));
+        try {
+            Parent root = loader.load();
+            mainView = loader.getController(); // Initialize mainView
+            mainView.setMainController(this); // Set the controller in MainView
+
+            mainView.updateCart(currentOrder.getProducts());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
+    public Connection getConnection() {
+        return connection;
     }
 
     public void addToCart(Product product, int quantity) {
@@ -51,9 +65,39 @@ public class MainController {
             return;
         }
 
-        currentOrder.addProduct(product, quantity);
-        mainView.updateCart(currentOrder.getProducts());
+        try {
+            // Check if the product is already in the cart
+            PreparedStatement checkStatement = connection.prepareStatement("SELECT * FROM cart WHERE product_id = ?");
+            checkStatement.setString(1, product.getId().toString());
+            ResultSet resultSet = checkStatement.executeQuery();
+
+            if (resultSet.next()) {
+                int existingQuantity = resultSet.getInt("quantity");
+                quantity += existingQuantity;
+
+                // Update the existing cart item
+                PreparedStatement updateStatement = connection
+                        .prepareStatement("UPDATE cart SET quantity = ? WHERE product_id = ?");
+                updateStatement.setInt(1, quantity);
+                updateStatement.setString(2, product.getId().toString());
+                updateStatement.executeUpdate();
+            } else {
+                // Insert the new cart item
+                PreparedStatement insertStatement = connection
+                        .prepareStatement("INSERT INTO cart (product_id, quantity) VALUES (?, ?)");
+                insertStatement.setString(1, product.getId().toString());
+                insertStatement.setInt(2, quantity);
+                insertStatement.executeUpdate();
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        // Update the cart view in your MainView
+        mainView.updateCartFromDatabase();
     }
+    // Rest of your method
 
     public void removeFromCart(Product product, int quantity) {
         if (quantity <= 0) {
@@ -61,14 +105,35 @@ public class MainController {
             return;
         }
 
-        int orderedQuantity = currentOrder.getProductQuantity(product);
-        if (quantity > orderedQuantity) {
-            mainView.showErrorMessage("Quantity exceeds the number of products in the cart.");
-            return;
+        try {
+            PreparedStatement checkStatement = connection.prepareStatement("SELECT * FROM cart WHERE product_id = ?");
+            checkStatement.setString(1, product.getId().toString());
+            ResultSet resultSet = checkStatement.executeQuery();
+
+            if (resultSet.next()) {
+                int existingQuantity = resultSet.getInt("quantity");
+                if (quantity >= existingQuantity) {
+                    // Remove the cart item completely if quantity is equal or more
+                    PreparedStatement deleteStatement = connection
+                            .prepareStatement("DELETE FROM cart WHERE product_id = ?");
+                    deleteStatement.setString(1, product.getId().toString());
+                    deleteStatement.executeUpdate();
+                } else {
+                    // Update the existing cart item
+                    PreparedStatement updateStatement = connection
+                            .prepareStatement("UPDATE cart SET quantity = ? WHERE product_id = ?");
+                    updateStatement.setInt(1, existingQuantity - quantity);
+                    updateStatement.setString(2, product.getId().toString());
+                    updateStatement.executeUpdate();
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
 
-        currentOrder.removeProduct(product, quantity);
-        mainView.updateCart(currentOrder.getProducts());
+        // Update the cart view in your MainView
+        mainView.updateCartFromDatabase();
     }
 
     public void checkout() {
@@ -82,11 +147,28 @@ public class MainController {
     }
 
     public void clearCart() {
+        // Clear the cart in the database
+        try {
+            PreparedStatement deleteCartItemsStatement = connection.prepareStatement("DELETE FROM cart");
+            deleteCartItemsStatement.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        // Clear the cart in the application
         currentOrder.clear();
         mainView.updateCart(currentOrder.getProducts());
     }
 
     public void exit(Stage primaryStage) {
+        try {
+            if (connection != null) {
+                connection.close();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
         primaryStage.close();
     }
 
@@ -97,5 +179,14 @@ public class MainController {
     public void setCustomer(Customer customer) {
         this.customer = customer;
 
+    }
+
+    public static Product getProductByIdFromList(String productId) {
+        for (Product product : products) {
+            if (product.getId().toString().equals(productId)) {
+                return product;
+            }
+        }
+        return null; // Handle the case when the product is not found
     }
 }

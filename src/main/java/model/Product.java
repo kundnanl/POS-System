@@ -14,6 +14,7 @@ public class Product {
         this.price = price;
         this.quantity = quantity;
     }
+    
 
     // Getters and Setters for the fields
 

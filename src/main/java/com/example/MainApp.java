@@ -13,13 +13,19 @@ import javafx.collections.ObservableList;
 import main.java.controller.MainController;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainApp extends Application {
+    private Connection connection;
 
-    @Override
-    public void start(Stage primaryStage) {
+        @Override
+    public void start(Stage primaryStage) throws SQLException {
         try {
             System.out.println("Loading the fxml file");
             // Load the FXML file for the main view
@@ -28,20 +34,42 @@ public class MainApp extends Application {
             System.out.println(" fxml file loaded: " + loader.toString());
 
             // Create the list of products
-            List<Product> productList = new ArrayList<>();
-            productList.add(new Product("Product 1", 10.0, 100));
-            productList.add(new Product("Product 2", 20.0, 50));
-            // Add more products as needed
+            try {
+                connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/POS", "root",
+                        "mysql");
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM product");
+            ResultSet resultSet = preparedStatement.executeQuery();
 
-            // Create an ObservableList from the list of products
-            ObservableList<Product> observableProductList = FXCollections.observableArrayList(productList);
+            ObservableList<Product> productList = FXCollections.observableArrayList();
 
+            while (resultSet.next()) {
+                String name = resultSet.getString("name");
+                double price = resultSet.getDouble("price");
+                int quantity = resultSet.getInt("quantity");
+
+                // Fetch product details from your products list or database using productId
+                Product product = new Product(name, price, quantity);
+                productList.add(product);
+            }
+            System.out.println("Fetched Products:");
+            for (Product product : productList) {
+                System.out.println(product);
+            }
+            
             // Create a customer
             Customer customer = new Customer("John Doe");
 
             // Get the MainView controller
-            // Create the MainController and pass the MainView and the list of products to it
-            MainController mainController = new MainController(observableProductList, customer);
+            // Create the MainController and pass the MainView and the list of products to
+            // it
+            MainController mainController = new MainController(productList, customer);
+            MainView mainView = loader.getController(); // Assuming you can access the MainView instance
+            mainView.setFetchedProducts(productList); // Set the fetched products
+            mainView.setMainController(mainController);
+            
 
             // Set up the primary stage
             Scene scene = new Scene(root, 800, 600);

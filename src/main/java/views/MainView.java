@@ -1,11 +1,19 @@
 package main.java.views;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.cell.PropertyValueFactory;
 import main.java.controller.MainController;
 import main.java.model.*;
 
@@ -33,16 +41,35 @@ public class MainView {
 
     private MainController mainController;
 
+    private Connection connection;
+
+    public void initialize() {
+        
+        productIdColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
+        productNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+        productPriceColumn.setCellValueFactory(new PropertyValueFactory<>("price"));
+        productQuantityColumn.setCellValueFactory(new PropertyValueFactory<>("quantity"));
+
+        try {
+            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/POS", "root",
+                    "mysql");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void setFetchedProducts(ObservableList<Product> fetchedProducts) {
+        productTableView.setItems(fetchedProducts);
+        ;
+    }
+
     public void setMainController(MainController mainController) {
         this.mainController = mainController;
     }
 
-    public void setProducts(ObservableList<Product> products) {
-        productTableView.setItems(products);
-    }
-
     public Product getSelectedProduct() {
         return productTableView.getSelectionModel().getSelectedItem();
+        // Fetch product details from your products list or database using productId
     }
 
     public void updateCart(ObservableList<Product> cartProducts) {
@@ -77,4 +104,26 @@ public class MainView {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
+    public void updateCartFromDatabase() {
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement("SELECT product_id, quantity FROM cart");
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            ObservableList<Product> cartProducts = FXCollections.observableArrayList();
+
+            while (resultSet.next()) {
+                String productId = resultSet.getString("product_id");
+                int quantity = resultSet.getInt("quantity");
+
+                Product product = MainController.getProductByIdFromList(productId); // Implement this method
+                cartProducts.add(product);
+            }
+
+            updateCart(cartProducts);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
