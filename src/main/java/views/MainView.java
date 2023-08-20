@@ -1,15 +1,25 @@
 package main.java.views;
 
+import java.io.IOException;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Optional;
 
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.DialogPane;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.VBox;
+import main.java.controller.CheckoutDialogController;
 import main.java.controller.MainController;
 import main.java.model.*;
 
@@ -35,13 +45,21 @@ public class MainView {
     @FXML
     private Button exitButton;
     @FXML
-    private TableView<Product> cartTableView;
+    public TableView<Product> cartTableView;
     @FXML
     private TableColumn<Product, String> cartProductNameColumn;
     @FXML
     private TableColumn<Product, Double> cartProductPriceColumn;
     @FXML
     private TableColumn<Product, Integer> cartProductQuantityColumn;
+    @FXML
+    private Label totalItemsLabel;
+    @FXML
+    private Label subTotalLabel;
+    @FXML
+    private Label totalWithTaxesLabel;
+
+    private MainController mainController;
 
     public void initialize() {
 
@@ -71,43 +89,69 @@ public class MainView {
 
     public void setFetchedProducts(ObservableList<Product> fetchedProducts) {
         productTableView.setItems(fetchedProducts);
-        ;
+    }
+
+    public void setFetchedCart(ObservableList<Product> fetchedProducts) {
+        cartTableView.setItems(fetchedProducts);
     }
 
     public void setMainController(MainController mainController) {
     }
 
-    public Product getSelectedProduct() {
-        return productTableView.getSelectionModel().getSelectedItem();
-    }
-
     public void updateCart(ObservableList<Product> cartProducts) {
-        productTableView.getItems().clear();
-        productTableView.getItems().addAll(cartProducts);
-    }
-
-    public void setRemoveFromCartButtonHandler(Runnable handler) {
-        removeFromCartButton.setOnAction(event -> handler.run());
+        cartTableView.getItems().clear();
     }
 
     public void setCheckoutButtonHandler(Runnable handler) {
-        checkoutButton.setOnAction(event -> handler.run());
+        checkoutButton.setOnAction(event -> {
+            handler.run();
+            performCheckout();
+        });
+    }
+
+    public void updateTotalLabels() {
+        ObservableList<Product> cartProducts = cartTableView.getItems();
+        MainController mainController = new MainController();
+
+        int totalItems = mainController.getTotalItems(cartProducts);
+        double subTotal = mainController.getSubTotal(cartProducts);
+        double totalWithTaxes = mainController.getTotalWithTaxes(cartProducts);
+
+        totalItemsLabel.setText(String.valueOf(totalItems));
+        subTotalLabel.setText(String.format("%.2f", subTotal));
+        totalWithTaxesLabel.setText(String.format("%.2f", totalWithTaxes));
+    }
+
+    private void performCheckout() {
+            cartTableView.getItems().clear();
+            updateTotalLabels();
     }
 
     public void setAddToCartButtonHandler(Runnable handler) {
         addToCartButton.setOnAction(event -> {
             Product selectedProduct = productTableView.getSelectionModel().getSelectedItem();
-            if (selectedProduct != null) {
-                handler.run();
-                System.out.println("Product added to cart: " + selectedProduct.getName());
+            handler.run();
+            updateTotalLabels();
+            System.out.println("Product added to cart: " + selectedProduct.getName());
+        });
+    }
+
+    public void setRemoveFromCartButtonHandler(Runnable handler) {
+        removeFromCartButton.setOnAction(event -> {
+            Product cartProduct = cartTableView.getSelectionModel().getSelectedItem();
+            if (cartProduct != null) {
+                handler.run(); // Just call the handler without duplicating logic
+                updateTotalLabels();
             } else {
-                showErrorMessage("Please select a product to add to cart.");
+                showErrorMessage("Please select a product to remove from cart.");
             }
         });
     }
 
     public void setClearCartButtonHandler(Runnable handler) {
-        clearCartButton.setOnAction(event -> handler.run());
+        clearCartButton.setOnAction(event -> {
+            handler.run();
+        });
     }
 
     public void setExitButtonHandler(Runnable handler) {
@@ -126,6 +170,10 @@ public class MainView {
         return productTableView.getSelectionModel().getSelectedItem();
     }
 
+    public Product getSelectedProductFromCart() {
+        return cartTableView.getSelectionModel().getSelectedItem();
+    }
+
     public void setCartProducts(ObservableList<Product> cartProducts) {
         cartTableView.setItems(cartProducts);
     }
@@ -133,8 +181,40 @@ public class MainView {
     public void updateCartTableView(ObservableList<Product> cartProducts) {
         cartTableView.setItems(cartProducts);
     }
+
     public void updateProductTableView(ObservableList<Product> productProducts) {
         productTableView.setItems(productProducts);
     }
-    
+
+    public static boolean showCheckoutConfirmation() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Checkout Confirmation");
+        alert.setHeaderText("Are you sure you want to check out?");
+        alert.setContentText("This will generate a bill and clear the cart.");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.isPresent() && result.get() == ButtonType.OK;
+    }
+
+public void showCheckoutDialog(String customerInfo, ObservableList<Product> cartItems) {
+    try {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/main/java/views/CheckoutDialog.fxml"));
+        DialogPane dialogPane = loader.load();
+        
+        // Get the controller from the loader
+        CheckoutDialogController controller = loader.getController();
+        controller.initializeData(customerInfo, cartItems);
+        // Create a new Dialog and set the content
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setDialogPane(dialogPane);
+        dialog.showAndWait();
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+
+    public void clearCartTableView() {
+        cartTableView.getItems().clear();
+    }
+
 }

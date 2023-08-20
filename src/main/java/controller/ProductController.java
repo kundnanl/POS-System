@@ -18,5 +18,4 @@ public class ProductController {
     public void removeProduct(Product product) {
         products.remove(product);
     }
-
 }
