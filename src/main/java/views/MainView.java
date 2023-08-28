@@ -14,11 +14,9 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.layout.VBox;
 import main.java.controller.CheckoutDialogController;
 import main.java.controller.MainController;
 import main.java.model.*;
@@ -58,8 +56,6 @@ public class MainView {
     private Label subTotalLabel;
     @FXML
     private Label totalWithTaxesLabel;
-
-    private MainController mainController;
 
     public void initialize() {
 
@@ -140,7 +136,7 @@ public class MainView {
         removeFromCartButton.setOnAction(event -> {
             Product cartProduct = cartTableView.getSelectionModel().getSelectedItem();
             if (cartProduct != null) {
-                handler.run(); // Just call the handler without duplicating logic
+                handler.run();
                 updateTotalLabels();
             } else {
                 showErrorMessage("Please select a product to remove from cart.");

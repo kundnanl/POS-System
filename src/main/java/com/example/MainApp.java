@@ -6,6 +6,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.TextInputDialog;
 import javafx.stage.Stage;
+import main.java.model.Customer;
 import main.java.model.Order;
 import main.java.model.Product;
 import main.java.views.CustomerDialog;
@@ -28,79 +29,84 @@ public class MainApp extends Application {
     @Override
     public void start(Stage primaryStage) throws SQLException {
         // Show the customer dialog and obtain customer details
-        CustomerDialog customerDialog = new CustomerDialog();
-        customerDialog.showAndWait().ifPresent(customer -> {
-            System.out.println("Customer Name: " + customer.getName());
-            System.out.println("Customer Email: " + customer.getEmail());
 
-            try {
-                System.out.println("Loading the fxml file");
-                // Load the FXML file for the main view
-                final FXMLLoader loader = new FXMLLoader(getClass().getResource("/main/java/views/MainView.fxml"));
-                Parent root = loader.load();
-                System.out.println(" fxml file loaded: " + loader.toString());
+        try {
+            Customer cust = new Customer("", "");
+            System.out.println("Loading the fxml file");
+            // Load the FXML file for the main view
+            final FXMLLoader loader = new FXMLLoader(getClass().getResource("/main/java/views/MainView.fxml"));
+            Parent root = loader.load();
+            System.out.println(" fxml file loaded: " + loader.toString());
 
-                // Set up the database connection
-                connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/POS", "root", "mysql");
+            // Set up the database connection
+            connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/POS", "root", "mysql");
 
-                // Fetch the list of products from the database
-                ObservableList<Product> productList = fetchProductsFromDatabase();
+            // Fetch the list of products from the database
+            ObservableList<Product> productList = fetchProductsFromDatabase();
 
-                // Create the MainController and pass necessary data
-                MainController mainController = new MainController(productList, customer);
-                MainView mainView = loader.getController(); // Assuming you can access the MainView instance
-                Order neworder = new Order(customer, mainView);
+            // Create the MainController and pass necessary data
+            MainController mainController = new MainController(productList, cust);
+            MainView mainView = loader.getController();
+            Order neworder = new Order(cust, mainView);
 
-                // Set up the MainView
-                mainView.setFetchedProducts(productList);
-                mainView.setFetchedCart(neworder.getCartProducts());
-                mainController.setMainView(mainView);
+            // Set up the MainView
+            mainView.setFetchedProducts(productList);
+            mainView.setFetchedCart(neworder.getCartProducts());
+            mainController.setMainView(mainView);
 
-                // Set button handlers
-                mainView.setAddToCartButtonHandler(() -> {
-                    Product selectedProduct = mainView.getSelectedProductFromProducts();
-                    if (selectedProduct != null) {
-                        mainController.addToCart(selectedProduct);
-                    } else {
-                        mainView.showErrorMessage("Please select a product to add to cart.");
-                    }
-                });
+            // Set button handlers
+            mainView.setAddToCartButtonHandler(() -> {
+                Product selectedProduct = mainView.getSelectedProductFromProducts();
+                if (selectedProduct != null) {
+                    mainController.addToCart(selectedProduct);
+                } else {
+                    mainView.showErrorMessage("Please select a product to add to cart.");
+                }
+            });
 
-                mainView.setClearCartButtonHandler(() -> {
-                    mainController.clearCart();
-                });
+            mainView.setClearCartButtonHandler(() -> {
+                mainController.clearCart();
+            });
 
-                mainView.setRemoveFromCartButtonHandler(() -> {
-                    Product cartProduct = mainView.getSelectedProductFromCart();
-                    if (cartProduct != null) {
-                        handleRemoveFromCart(mainController, mainView, cartProduct);
-                    } else {
-                        mainView.showErrorMessage("Please select a product to remove from cart.");
-                    }
-                });
+            mainView.setRemoveFromCartButtonHandler(() -> {
+                Product cartProduct = mainView.getSelectedProductFromCart();
+                if (cartProduct != null) {
+                    handleRemoveFromCart(mainController, mainView, cartProduct);
+                } else {
+                    mainView.showErrorMessage("Please select a product to remove from cart.");
+                }
+            });
 
-                mainView.setCheckoutButtonHandler(() -> {
-                    if (MainView.showCheckoutConfirmation()) {
+            mainView.setCheckoutButtonHandler(() -> {
+                boolean proceedWithCheckout = MainView.showCheckoutConfirmation();
+                if (proceedWithCheckout) {
+                    CustomerDialog customerDialog = new CustomerDialog();
+                    Optional<Customer> customerResult = customerDialog.showAndWait();
+
+                    if (customerResult.isPresent()) {
+                        Customer customer = customerResult.get();
                         String customerInfo = customer.getName() + "\nEmail: " + customer.getEmail();
+
                         ObservableList<Product> cartItems = neworder.getCartProducts();
                         mainController.clearCart(); // Clear the cart after checkout
                         mainView.updateCartTableView(cartItems); // Update the cart table view
                         mainView.updateTotalLabels(); // Update the total labels
                         mainView.showCheckoutDialog(customerInfo, cartItems);
                     }
-                });
+                }
 
-                // Set up the primary stage
-                Scene scene = new Scene(root);
-                scene.getStylesheets().add(getClass().getResource("/main/java/resources/styles.css").toExternalForm());
-                primaryStage.setScene(scene);
-                primaryStage.setTitle("POS System");
-                primaryStage.show();
-            } catch (IOException | SQLException e) {
-                e.printStackTrace();
-                System.err.print("Error Loading File");
-            }
-        });
+            });
+
+            // Set up the primary stage
+            Scene scene = new Scene(root);
+            scene.getStylesheets().add(getClass().getResource("/main/java/resources/styles.css").toExternalForm());
+            primaryStage.setScene(scene);
+            primaryStage.setTitle("POS System");
+            primaryStage.show();
+        } catch (IOException | SQLException e) {
+            e.printStackTrace();
+            System.err.print("Error Loading File");
+        }
     }
 
     private ObservableList<Product> fetchProductsFromDatabase() throws SQLException {
@@ -121,24 +127,32 @@ public class MainApp extends Application {
     }
 
     private void handleRemoveFromCart(MainController mainController, MainView mainView, Product cartProduct) {
-        TextInputDialog dialog = new TextInputDialog("1");
-        dialog.setTitle("Remove from Cart");
-        dialog.setHeaderText("Enter quantity to remove from cart:");
-        dialog.setContentText("Quantity:");
+        Product product = mainView.getSelectedProductFromCart();
+        if (product != null) {
+            TextInputDialog dialog = new TextInputDialog("1");
+            dialog.setTitle("Remove from Cart");
+            dialog.setHeaderText("Enter quantity to remove from cart:");
+            dialog.setContentText("Quantity:");
 
-        Optional<String> result = dialog.showAndWait();
-        if (result.isPresent()) {
-            try {
-                int quantityToRemove = Integer.parseInt(result.get());
-                if (quantityToRemove > 0) {
-                    mainController.removeFromCart(cartProduct, quantityToRemove);
-                    System.out.println("Removed " + quantityToRemove + " of " + cartProduct.getName() + " from cart.");
-                } else {
-                    mainView.showErrorMessage("Please enter a valid quantity to remove.");
+            Optional<String> result = dialog.showAndWait();
+            if (result.isPresent()) {
+                try {
+                    int quantityToRemove = Integer.parseInt(result.get());
+                    if (quantityToRemove > 0 && quantityToRemove <= cartProduct.getQuantity()) {
+                        mainController.removeFromCart(product, quantityToRemove);
+                        System.out.println(
+                                "Removed " + quantityToRemove + " of " + cartProduct.getName() + " from cart.");
+                    } else if (quantityToRemove <= 0) {
+                        mainView.showErrorMessage("Please enter a valid quantity to remove.");
+                    } else {
+                        mainView.showErrorMessage("You are trying to remove more than available in the cart.");
+                    }
+                } catch (NumberFormatException e) {
+                    mainView.showErrorMessage("Please enter a valid number.");
                 }
-            } catch (NumberFormatException e) {
-                mainView.showErrorMessage("Please enter a valid number.");
             }
+        } else {
+            mainView.showErrorMessage("Please select a product to remove from cart.");
         }
     }
 

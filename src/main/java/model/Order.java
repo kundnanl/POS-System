@@ -17,6 +17,7 @@ public class Order {
     private Customer customer;
     private Map<Product, Integer> productQuantityMap;
     private Connection connection;
+    public Order() {}
     public Order(Customer customer, MainView mainView) {
         this.customer = customer;
         this.productQuantityMap = new HashMap<>();
@@ -185,7 +186,10 @@ public class Order {
             } catch (SQLException e) {
                 e.printStackTrace();
             }
-        } else {
+        } else if(availablequantity < quantityToRemove) {
+            
+        }
+        else {
             productQuantityMap.put(product, quantityToRemove);
 
             try {

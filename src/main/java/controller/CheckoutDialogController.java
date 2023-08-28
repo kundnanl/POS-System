@@ -54,6 +54,5 @@ public class CheckoutDialogController {
         // Calculate and display the total with taxes
         double totalWithTaxes = mainController.getTotalWithTaxes(cartItemsTableView.getItems());
         totalWithTaxesLabel.setText(String.format("$%.2f", totalWithTaxes));
-
     }
 }
